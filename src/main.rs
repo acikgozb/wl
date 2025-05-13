@@ -1,13 +1,30 @@
 use clap::{Parser, Subcommand};
+use std::{error, process::ExitCode};
 
-fn main() {
-    run().unwrap()
+// TODO: add err handling and proper exit codes.
+fn main() -> ExitCode {
+    match run() {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(_) => ExitCode::FAILURE,
+    }
 }
 
-fn run() -> Result<(), ()> {
+fn run() -> Result<(), Box<dyn error::Error>> {
     let args = Args::parse();
 
-    println!("{:?}", args);
+    let wl_cmd = args.wl_command.unwrap_or(WlCommand::Status);
+    match wl_cmd {
+        WlCommand::Status => wl::status(),
+        WlCommand::Toggle => wl::toggle(),
+        WlCommand::Scan(scan_args) => wl::scan(),
+        WlCommand::Connect {
+            ssid,
+            scan_args,
+            force,
+        } => wl::connect(),
+        WlCommand::Disconnect { forget } => wl::disconnect(),
+    }?;
+
     Ok(())
 }
 
@@ -21,6 +38,7 @@ struct Args {
 #[derive(Debug, Subcommand)]
 enum WlCommand {
     /// Show the overall status of WiFi (on/off, connected network if any)
+    #[clap(visible_alias = "s")]
     Status,
 
     /// Toggle WiFi on and off.
