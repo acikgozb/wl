@@ -1,7 +1,22 @@
 use std::{
+    fmt,
     io::{BufRead, Error},
     process::Command,
 };
+
+pub enum WiFiStatus {
+    Enabled,
+    Disabled,
+}
+
+impl fmt::Display for WiFiStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WiFiStatus::Enabled => write!(f, "enabled"),
+            WiFiStatus::Disabled => write!(f, "disabled"),
+        }
+    }
+}
 
 pub fn get_active_connections() -> Result<Vec<String>, Error> {
     let mut nmcli = Command::new("nmcli");
@@ -22,7 +37,7 @@ pub fn get_active_connections() -> Result<Vec<String>, Error> {
     Ok(active_conn_device_pairs)
 }
 
-pub fn get_wifi_status() -> Result<String, Error> {
+pub fn get_wifi_status() -> Result<WiFiStatus, Error> {
     let mut nmcli = Command::new("nmcli");
     let cmd = nmcli.args(["-g", "WIFI"]).arg("g").output()?;
 
@@ -31,8 +46,15 @@ pub fn get_wifi_status() -> Result<String, Error> {
         return Err(Error::other(nmcli_err));
     }
 
-    cmd.stdout
+    let status = cmd
+        .stdout
         .lines()
         .take(1)
-        .collect::<Result<String, Error>>()
+        .collect::<Result<String, Error>>()?;
+
+    Ok(if status == "enabled" {
+        WiFiStatus::Enabled
+    } else {
+        WiFiStatus::Disabled
+    })
 }
