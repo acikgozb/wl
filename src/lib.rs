@@ -6,6 +6,7 @@ use std::{error, fmt, io};
 pub enum Error {
     CannotGetActiveConnections(io::Error),
     CannotGetWifiStatus(io::Error),
+    CannotToggleWifi(io::Error),
 }
 
 impl error::Error for Error {}
@@ -16,7 +17,13 @@ impl fmt::Display for Error {
 }
 
 pub fn toggle() -> Result<(), Error> {
-    todo!()
+    let current_wifi_status = nmcli::get_wifi_status().map_err(Error::CannotGetWifiStatus)?;
+    let toggled_status =
+        nmcli::toggle_wifi(current_wifi_status).map_err(Error::CannotToggleWifi)?;
+
+    println!("wifi: {}", toggled_status);
+
+    Ok(())
 }
 
 pub fn status() -> Result<(), Error> {

@@ -58,3 +58,28 @@ pub fn get_wifi_status() -> Result<WiFiStatus, Error> {
         WiFiStatus::Disabled
     })
 }
+
+pub fn toggle_wifi(old_status: WiFiStatus) -> Result<WiFiStatus, Error> {
+    let mut nmcli = Command::new("nmcli");
+    let cmd = nmcli.arg("radio").arg("wifi");
+
+    let new_status = match old_status {
+        WiFiStatus::Enabled => {
+            cmd.arg("off");
+            WiFiStatus::Disabled
+        }
+        WiFiStatus::Disabled => {
+            cmd.arg("on");
+            WiFiStatus::Enabled
+        }
+    };
+
+    let cmd = cmd.output()?;
+
+    if !cmd.status.success() {
+        let nmcli_err = cmd.stderr.lines().collect::<Result<String, Error>>()?;
+        return Err(Error::other(nmcli_err));
+    }
+
+    Ok(new_status)
+}
