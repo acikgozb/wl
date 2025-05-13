@@ -42,6 +42,7 @@ enum WlCommand {
     Status,
 
     /// Toggle WiFi on and off.
+    #[clap(visible_alias = "t")]
     Toggle,
 
     /// See available WiFi networks.
