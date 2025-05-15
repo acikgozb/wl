@@ -7,6 +7,7 @@ pub enum Error {
     CannotGetActiveConnections(io::Error),
     CannotGetWifiStatus(io::Error),
     CannotToggleWifi(io::Error),
+    CannotListNetworks(io::Error),
 }
 
 impl error::Error for Error {}
@@ -27,7 +28,7 @@ pub fn toggle() -> Result<(), Error> {
 }
 
 pub fn status() -> Result<(), Error> {
-    let active_conns = nmcli::get_active_connections()
+    let active_conns = nmcli::show_active_connections()
         .map_err(Error::CannotGetActiveConnections)?
         .join(", ");
 
@@ -35,6 +36,16 @@ pub fn status() -> Result<(), Error> {
 
     println!("wifi: {}", wifi_status);
     println!("connected networks: {}", active_conns);
+
+    Ok(())
+}
+
+pub fn list_networks(active: bool, ssid: bool) -> Result<(), Error> {
+    let networks = nmcli::show_connections(active, ssid)
+        .map_err(Error::CannotListNetworks)?
+        .join("\n");
+
+    println!("{}", networks);
 
     Ok(())
 }
