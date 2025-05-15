@@ -79,10 +79,25 @@ pub fn show_active_connections() -> Result<Vec<String>, Error> {
     Ok(active_conn_device_pairs)
 }
 
+pub fn show_connections(active: bool, ssid: bool) -> Result<Vec<String>, Error> {
+    let mut nmcli = Nmcli::new();
 
+    if ssid {
+        nmcli.with_global_args(vec!["--fields", "NAME"]);
     }
 
+    nmcli.with_subcommands(vec!["connection", "show"]);
+
+    if active {
+        nmcli.with_subcommand_args(vec!["--active"]);
+    }
+
+    nmcli
+        .exec()?
         .lines()
+        .collect::<Result<Vec<String>, Error>>()
+}
+
 pub fn get_wifi_status() -> Result<WiFiStatus, Error> {
     let mut nmcli = Nmcli::new();
     nmcli

@@ -23,6 +23,7 @@ fn run() -> Result<(), Box<dyn error::Error>> {
             force,
         } => wl::connect(),
         WlCommand::Disconnect { forget } => wl::disconnect(),
+        WlCommand::ListNetworks { active, ssid } => wl::list_networks(active, ssid),
     }?;
 
     Ok(())
@@ -66,6 +67,18 @@ enum WlCommand {
         /// Forget the network (delete it from the known network list).
         #[arg(short = 'd', long, default_value_t = false)]
         forget: bool,
+    },
+
+    /// See known networks.
+    #[clap(visible_alias = "ls")]
+    ListNetworks {
+        /// See active (connected) networks.
+        #[arg(short, long, default_value_t = false)]
+        active: bool,
+
+        /// Output the SSID's only.
+        #[arg(long, default_value_t = false)]
+        ssid: bool,
     },
 }
 
