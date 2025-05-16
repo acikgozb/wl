@@ -1,6 +1,13 @@
+mod adapter;
 mod nmcli;
 
-use std::{error, fmt, io};
+use std::{
+    collections::HashMap,
+    error, fmt,
+    io::{self, Write},
+};
+
+use adapter::Wl;
 
 #[derive(Debug)]
 pub enum Error {
@@ -17,10 +24,21 @@ impl fmt::Display for Error {
     }
 }
 
+pub fn new() -> impl adapter::Wl {
+    nmcli::Nmcli::new()
+}
+
 pub fn toggle() -> Result<(), Error> {
-    let current_wifi_status = nmcli::get_wifi_status().map_err(Error::CannotGetWifiStatus)?;
-    let toggled_status =
-        nmcli::toggle_wifi(current_wifi_status).map_err(Error::CannotToggleWifi)?;
+    let process = crate::new();
+    let prev_status = process
+        .get_wifi_status()
+        .map_err(Error::CannotGetWifiStatus)?
+        .to_string();
+
+    let process = crate::new();
+    let toggled_status = process
+        .toggle_wifi(prev_status.as_str())
+        .map_err(Error::CannotToggleWifi)?;
 
     println!("wifi: {}", toggled_status);
 
@@ -28,11 +46,15 @@ pub fn toggle() -> Result<(), Error> {
 }
 
 pub fn status() -> Result<(), Error> {
-    let active_conns = nmcli::show_active_connections()
+    let process = crate::new();
+    let active_conns = process
+        .get_active_ssid_dev_pairs()
         .map_err(Error::CannotGetActiveConnections)?
         .join(", ");
 
-    let wifi_status = nmcli::get_wifi_status().map_err(Error::CannotGetWifiStatus)?;
+    let wifi_status = process
+        .get_wifi_status()
+        .map_err(Error::CannotGetWifiStatus)?;
 
     println!("wifi: {}", wifi_status);
     println!("connected networks: {}", active_conns);
@@ -40,8 +62,10 @@ pub fn status() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn list_networks(active: bool, ssid: bool) -> Result<(), Error> {
-    let networks = nmcli::show_connections(active, ssid)
+pub fn list_networks(show_active: bool, show_ssid: bool) -> Result<(), Error> {
+    let process = crate::new();
+    let networks = process
+        .list_networks(show_active, show_ssid)
         .map_err(Error::CannotListNetworks)?
         .join("\n");
 
