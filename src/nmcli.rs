@@ -1,8 +1,12 @@
 use std::{
     fmt,
-    io::{BufRead, Error},
+    io::{self, BufRead, Error, Write},
     process::Command,
 };
+
+use crate::adapter::Wl;
+
+pub const LOOPBACK_INTERFACE_NAME: &str = "lo";
 
 pub enum WiFiStatus {
     Enabled,
@@ -18,43 +22,16 @@ impl fmt::Display for WiFiStatus {
     }
 }
 
-struct Nmcli<'a> {
-    global_args: Vec<&'a str>,
-    subcommands: Vec<&'a str>,
-    subcommand_args: Vec<&'a str>,
-}
+pub struct Nmcli;
 
-impl<'a> Nmcli<'a> {
-    fn new() -> Self {
-        Self {
-            global_args: vec![],
-            subcommands: vec![],
-            subcommand_args: vec![],
-        }
+impl Nmcli {
+    pub fn new() -> Self {
+        Self
     }
 
-    fn with_global_args(&mut self, args: Vec<&'a str>) -> &mut Self {
-        self.global_args = args;
-        self
-    }
-
-    fn with_subcommands(&mut self, cmds: Vec<&'a str>) -> &mut Self {
-        self.subcommands = cmds;
-        self
-    }
-
-    fn with_subcommand_args(&mut self, args: Vec<&'a str>) -> &mut Self {
-        self.subcommand_args = args;
-        self
-    }
-
-    fn exec(self) -> Result<Vec<u8>, Error> {
+    fn exec(&self, args: &[&str]) -> Result<Vec<u8>, Error> {
         let mut nmcli = Command::new("nmcli");
-        let cmd = nmcli
-            .args(self.global_args)
-            .args(self.subcommands)
-            .args(self.subcommand_args)
-            .output()?;
+        let cmd = nmcli.args(args).output()?;
 
         if !cmd.status.success() {
             let nmcli_err = cmd.stderr.lines().collect::<Result<String, Error>>()?;
@@ -65,72 +42,84 @@ impl<'a> Nmcli<'a> {
     }
 }
 
-pub fn show_active_connections() -> Result<Vec<String>, Error> {
-    let mut nmcli = Nmcli::new();
-    nmcli
-        .with_global_args(vec!["-g", "NAME,DEVICE"])
-        .with_subcommands(vec!["connection", "show"])
-        .with_subcommand_args(vec!["--active"]);
+impl Wl for Nmcli {
+    fn get_wifi_status(&self) -> Result<impl fmt::Display, Error> {
+        let args: [&str; 3] = ["-g", "WIFI", "g"];
+        let result = self.exec(&args)?;
 
-    let result = nmcli.exec()?;
+        let status = result.lines().take(1).collect::<Result<String, Error>>()?;
 
-    let active_conn_device_pairs = result.lines().collect::<Result<Vec<String>, Error>>()?;
-
-    Ok(active_conn_device_pairs)
-}
-
-pub fn show_connections(active: bool, ssid: bool) -> Result<Vec<String>, Error> {
-    let mut nmcli = Nmcli::new();
-
-    if ssid {
-        nmcli.with_global_args(vec!["--fields", "NAME"]);
-    }
-
-    nmcli.with_subcommands(vec!["connection", "show"]);
-
-    if active {
-        nmcli.with_subcommand_args(vec!["--active"]);
-    }
-
-    nmcli
-        .exec()?
-        .lines()
-        .collect::<Result<Vec<String>, Error>>()
-}
-
-pub fn get_wifi_status() -> Result<WiFiStatus, Error> {
-    let mut nmcli = Nmcli::new();
-    nmcli
-        .with_global_args(vec!["-g", "WIFI"])
-        .with_subcommands(vec!["g"]);
-
-    let result = nmcli.exec()?;
-
-    let status = result.lines().take(1).collect::<Result<String, Error>>()?;
-
-    Ok(if status == "enabled" {
-        WiFiStatus::Enabled
-    } else {
-        WiFiStatus::Disabled
-    })
-}
-
-pub fn toggle_wifi(old_status: WiFiStatus) -> Result<WiFiStatus, Error> {
-    let mut nmcli = Nmcli::new();
-    nmcli.with_subcommands(vec!["radio", "wifi"]);
-
-    let new_status = match old_status {
-        WiFiStatus::Enabled => {
-            nmcli.with_subcommand_args(vec!["off"]);
-            WiFiStatus::Disabled
-        }
-        WiFiStatus::Disabled => {
-            nmcli.with_subcommand_args(vec!["on"]);
+        Ok(if status == "enabled" {
             WiFiStatus::Enabled
+        } else {
+            WiFiStatus::Disabled
+        })
+    }
+
+    fn toggle_wifi(&self, prev_status: &str) -> Result<impl fmt::Display, Error> {
+        let mut args: [&str; 3] = ["radio", "wifi", ""];
+
+        let new_status = if prev_status == "enabled" {
+            args[2] = "off";
+            WiFiStatus::Disabled
+        } else {
+            args[2] = "on";
+            WiFiStatus::Enabled
+        };
+
+        let _ = self.exec(&args)?;
+
+        Ok(new_status)
+    }
+
+    // TODO: Return iter of tuples, which allows the caller to decide how to use it.
+    fn get_active_ssid_dev_pairs(&self) -> Result<Vec<String>, Error> {
+        let args: [&str; 5] = ["-g", "NAME,DEVICE", "connection", "show", "--active"];
+
+        let result = self.exec(&args)?;
+
+        let active_ssid_dev_pairs = result.lines().collect::<Result<Vec<String>, Error>>()?;
+        Ok(active_ssid_dev_pairs)
+    }
+
+    fn list_networks(&self, show_active: bool, show_ssid: bool) -> Result<Vec<String>, Error> {
+        let mut args: [&str; 5] = ["", "", "connection", "show", ""];
+
+        if show_ssid {
+            args[0] = "--fields";
+            args[1] = "NAME";
         }
-    };
 
-    let _ = nmcli.exec()?;
+        if show_active {
+            args[4] = "--active";
+        }
 
-    Ok(new_status)
+        let args: Vec<&str> = args.into_iter().filter(|a| !a.is_empty()).collect();
+
+        self.exec(&args[..])?
+            .lines()
+            .collect::<Result<Vec<String>, Error>>()
+    }
+
+    fn get_active_ssids(&self) -> Result<Vec<String>, Error> {
+        let args: [&str; 5] = ["-g", "NAME", "connection", "show", "--active"];
+
+        let result = self.exec(&args)?;
+
+        result
+            .lines()
+            .filter(|l| match l {
+                Ok(l) => !l.contains(LOOPBACK_INTERFACE_NAME),
+                Err(_) => true,
+            })
+            .collect()
+    }
+
+    fn disconnect(&self, ssid: &str, forget: bool) -> Result<(), Error> {
+        let mut args: [&str; 4] = ["connection", "", "id", ssid];
+        args[1] = if forget { "delete" } else { "down" };
+
+        let result = self.exec(&args)?;
+        io::stdout().write_all(&result[..])
+    }
 }

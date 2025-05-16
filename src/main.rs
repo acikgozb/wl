@@ -22,8 +22,11 @@ fn run() -> Result<(), Box<dyn error::Error>> {
             scan_args,
             force,
         } => wl::connect(),
-        WlCommand::Disconnect { forget } => wl::disconnect(),
-        WlCommand::ListNetworks { active, ssid } => wl::list_networks(active, ssid),
+        WlCommand::Disconnect { ssid, forget } => wl::disconnect(ssid, forget),
+        WlCommand::ListNetworks {
+            show_active,
+            show_ssid,
+        } => wl::list_networks(show_active, show_ssid),
     }?;
 
     Ok(())
@@ -62,23 +65,27 @@ enum WlCommand {
         force: bool,
     },
 
-    /// Disconnect from the currently connected WiFi network.
+    /// Disconnect from a WiFi network.
+    #[clap(visible_alias = "d")]
     Disconnect {
         /// Forget the network (delete it from the known network list).
         #[arg(short = 'd', long, default_value_t = false)]
         forget: bool,
+
+        /// SSID of the target network.
+        ssid: Option<String>,
     },
 
     /// See known networks.
     #[clap(visible_alias = "ls")]
     ListNetworks {
         /// See active (connected) networks.
-        #[arg(short, long, default_value_t = false)]
-        active: bool,
+        #[arg(short = 'a', long = "active", default_value_t = false)]
+        show_active: bool,
 
         /// Output the SSID's only.
-        #[arg(long, default_value_t = false)]
-        ssid: bool,
+        #[arg(short = 's', long = "ssid", default_value_t = false)]
+        show_ssid: bool,
     },
 }
 
@@ -92,7 +99,7 @@ struct ScanArgs {
     #[arg(short = 'r', long, default_value_t = false)]
     re_scan: bool,
 
-    /// Set the re-scan refresh timer
+    /// Set the re-scan refresh timer.
     #[arg(short = 't', long, default_value_t = 5)]
     refresh_in: u8,
 }
