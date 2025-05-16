@@ -15,6 +15,9 @@ pub enum Error {
     CannotGetWifiStatus(io::Error),
     CannotToggleWifi(io::Error),
     CannotListNetworks(io::Error),
+    InvalidActiveSSID(Option<String>),
+    CouldNotAskSSID(io::Error),
+    CouldNotDisconnect(io::Error),
 }
 
 impl error::Error for Error {}
@@ -82,6 +85,52 @@ pub fn scan() -> Result<(), Error> {
     todo!()
 }
 
-pub fn disconnect() -> Result<(), Error> {
-    todo!()
+pub fn disconnect(ssid: Option<String>, forget: bool) -> Result<(), Error> {
+    let ssid = match ssid {
+        Some(val) => val,
+        None => select_active_ssid()?,
+    };
+
+    let process = crate::new();
+    process
+        .disconnect(&ssid, forget)
+        .map_err(Error::CouldNotDisconnect)
+}
+
+fn select_active_ssid() -> Result<String, Error> {
+    let process = crate::new();
+    let active_ssids = process
+        .get_active_ssids()
+        .map_err(Error::CannotGetActiveConnections)?;
+
+    let mut prompt = String::new();
+    let mut conns = HashMap::new();
+
+    for (idx, ssid) in active_ssids
+        .into_iter()
+        .filter(|c| !c.contains(nmcli::LOOPBACK_INTERFACE_NAME))
+        .enumerate()
+    {
+        prompt = format!("{}({}) {}\n", prompt, idx, ssid);
+        conns.insert(idx, ssid);
+    }
+
+    let mut answer_buf = String::new();
+
+    print!(
+        "Select the SSID you want to disconnect from:\n{}\n> ",
+        prompt.trim_end()
+    );
+    io::stdout().flush().map_err(Error::CouldNotAskSSID)?;
+
+    io::stdin()
+        .read_line(&mut answer_buf)
+        .map_err(|err| Error::InvalidActiveSSID(Some(err.to_string())))?;
+
+    let answer = answer_buf
+        .trim()
+        .parse::<usize>()
+        .map_err(|err| Error::InvalidActiveSSID(Some(err.to_string())))?;
+
+    conns.remove(&answer).ok_or(Error::InvalidActiveSSID(None))
 }

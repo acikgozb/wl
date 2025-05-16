@@ -22,7 +22,7 @@ fn run() -> Result<(), Box<dyn error::Error>> {
             scan_args,
             force,
         } => wl::connect(),
-        WlCommand::Disconnect { forget } => wl::disconnect(),
+        WlCommand::Disconnect { ssid, forget } => wl::disconnect(ssid, forget),
         WlCommand::ListNetworks {
             show_active,
             show_ssid,
@@ -65,11 +65,15 @@ enum WlCommand {
         force: bool,
     },
 
-    /// Disconnect from the currently connected WiFi network.
+    /// Disconnect from a WiFi network.
+    #[clap(visible_alias = "d")]
     Disconnect {
         /// Forget the network (delete it from the known network list).
         #[arg(short = 'd', long, default_value_t = false)]
         forget: bool,
+
+        /// SSID of the target network.
+        ssid: Option<String>,
     },
 
     /// See known networks.

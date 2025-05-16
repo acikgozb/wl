@@ -115,5 +115,11 @@ impl Wl for Nmcli {
             .collect()
     }
 
+    fn disconnect(&self, ssid: &str, forget: bool) -> Result<(), Error> {
+        let mut args: [&str; 4] = ["connection", "", "id", ssid];
+        args[1] = if forget { "delete" } else { "down" };
 
+        let result = self.exec(&args)?;
+        io::stdout().write_all(&result[..])
+    }
 }
