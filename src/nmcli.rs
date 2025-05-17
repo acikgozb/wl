@@ -82,7 +82,7 @@ impl Wl for Nmcli {
         Ok(active_ssid_dev_pairs)
     }
 
-    fn list_networks(&self, show_active: bool, show_ssid: bool) -> Result<Vec<String>, Error> {
+    fn list_networks(&self, show_active: bool, show_ssid: bool) -> Result<(), Error> {
         let mut args: [&str; 5] = ["", "", "connection", "show", ""];
 
         if show_ssid {
@@ -96,9 +96,8 @@ impl Wl for Nmcli {
 
         let args: Vec<&str> = args.into_iter().filter(|a| !a.is_empty()).collect();
 
-        self.exec(&args[..])?
-            .lines()
-            .collect::<Result<Vec<String>, Error>>()
+        let result = self.exec(&args[..])?;
+        io::stdout().write_all(&result)
     }
 
     fn get_active_ssids(&self) -> Result<Vec<String>, Error> {
