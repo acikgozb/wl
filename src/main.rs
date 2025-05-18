@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use std::{error, process::ExitCode};
+use std::{error, ffi::OsString, os::unix::ffi::OsStringExt, process::ExitCode};
 
 // TODO: add err handling and proper exit codes.
 fn main() -> ExitCode {
@@ -22,7 +22,10 @@ fn run() -> Result<(), Box<dyn error::Error>> {
             scan_args,
             force,
         } => wl::connect(),
-        WlCommand::Disconnect { ssid, forget } => wl::disconnect(ssid, forget),
+        WlCommand::Disconnect { ssid, forget } => {
+            let ssid = ssid.map(OsStringExt::into_vec);
+            wl::disconnect(ssid, forget)
+        }
         WlCommand::ListNetworks {
             show_active,
             show_ssid,
@@ -55,7 +58,7 @@ enum WlCommand {
     /// Connect to a WiFi network.
     Connect {
         //// SSID to connect.
-        ssid: Option<String>,
+        ssid: Option<OsString>,
 
         #[command(flatten)]
         scan_args: ScanArgs,
@@ -73,7 +76,7 @@ enum WlCommand {
         forget: bool,
 
         /// SSID of the target network.
-        ssid: Option<String>,
+        ssid: Option<OsString>,
     },
 
     /// See known networks.
