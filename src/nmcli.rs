@@ -6,7 +6,7 @@ use std::{
     process::Command,
 };
 
-use crate::adapter::Wl;
+use crate::adapter::{SsidDevPair, Wl};
 
 pub const LOOPBACK_INTERFACE_NAME: &[u8] = b"lo";
 
@@ -75,14 +75,27 @@ impl Wl for Nmcli {
         Ok(new_status)
     }
 
-    // TODO: Return iter of tuples, which allows the caller to decide how to use it.
-    fn get_active_ssid_dev_pairs(&self) -> Result<Vec<String>, Error> {
-        let args: [&str; 5] = ["-g", "NAME,DEVICE", "connection", "show", "--active"];
+    fn get_active_ssid_dev_pairs(&self) -> Result<Vec<SsidDevPair>, Error> {
+        let args = ["-g", "NAME,DEVICE", "connection", "show", "--active"];
 
-        let result = self.exec(&args)?;
+        let result = self.exec(&args.map(|a| a.as_bytes()))?;
 
-        let active_ssid_dev_pairs = result.lines().collect::<Result<Vec<String>, Error>>()?;
-        Ok(active_ssid_dev_pairs)
+        const NMCLI_FIELD_SEPARATOR: u8 = b':';
+
+        Ok(result
+            .split(|b| b == &0xA)
+            .filter_map(|s| {
+                let line = s.strip_suffix(&[0xD]).unwrap_or(s);
+                if line.is_empty() {
+                    None
+                } else {
+                    let pair = line
+                        .split(|b| b == &NMCLI_FIELD_SEPARATOR)
+                        .collect::<Vec<&[u8]>>();
+                    Some((pair[0].to_vec(), pair[1].to_vec()))
+                }
+            })
+            .collect::<Vec<SsidDevPair>>())
     }
 
     fn list_networks(&self, show_active: bool, show_ssid: bool) -> Result<(), Error> {
