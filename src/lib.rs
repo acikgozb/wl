@@ -18,6 +18,7 @@ pub enum Error {
     InvalidActiveSSID(Option<String>),
     CouldNotAskSSID(io::Error),
     CouldNotDisconnect(io::Error),
+    CannotWriteStdout(io::Error),
 }
 
 impl error::Error for Error {}
@@ -80,7 +81,7 @@ pub fn scan() -> Result<(), Error> {
     todo!()
 }
 
-pub fn disconnect(ssid: Option<String>, forget: bool) -> Result<(), Error> {
+pub fn disconnect(ssid: Option<Vec<u8>>, forget: bool) -> Result<(), Error> {
     let ssid = match ssid {
         Some(val) => val,
         None => select_active_ssid()?,
@@ -92,32 +93,37 @@ pub fn disconnect(ssid: Option<String>, forget: bool) -> Result<(), Error> {
         .map_err(Error::CouldNotDisconnect)
 }
 
-fn select_active_ssid() -> Result<String, Error> {
+fn select_active_ssid() -> Result<Vec<u8>, Error> {
     let process = crate::new();
     let active_ssids = process
         .get_active_ssids()
         .map_err(Error::CannotGetActiveConnections)?;
 
-    let mut prompt = String::new();
+    let mut ssids = Vec::new();
     let mut conns = HashMap::new();
 
-    for (idx, ssid) in active_ssids
-        .into_iter()
-        .filter(|c| !c.contains(nmcli::LOOPBACK_INTERFACE_NAME))
-        .enumerate()
-    {
-        prompt = format!("{}({}) {}\n", prompt, idx, ssid);
+    for (idx, ssid) in active_ssids.into_iter().enumerate() {
+        ssids = [
+            &ssids[..],
+            b"(",
+            idx.to_string().as_bytes(),
+            b") ",
+            &ssid[..],
+        ]
+        .concat();
         conns.insert(idx, ssid);
     }
 
-    let mut answer_buf = String::new();
-
-    print!(
-        "Select the SSID you want to disconnect from:\n{}\n> ",
-        prompt.trim_end()
-    );
+    let out_buf = &[
+        b"Select the SSID you want to disconnect from:\n",
+        &ssids[..],
+        b"\n> ",
+    ]
+    .concat();
+    write_out(out_buf)?;
     io::stdout().flush().map_err(Error::CouldNotAskSSID)?;
 
+    let mut answer_buf = String::new();
     io::stdin()
         .read_line(&mut answer_buf)
         .map_err(|err| Error::InvalidActiveSSID(Some(err.to_string())))?;
@@ -128,4 +134,10 @@ fn select_active_ssid() -> Result<String, Error> {
         .map_err(|err| Error::InvalidActiveSSID(Some(err.to_string())))?;
 
     conns.remove(&answer).ok_or(Error::InvalidActiveSSID(None))
+}
+
+fn write_out(buf: &[u8]) -> Result<(), Error> {
+    io::stdout()
+        .write_all(buf)
+        .map_err(Error::CannotWriteStdout)
 }

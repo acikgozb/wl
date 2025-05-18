@@ -1,12 +1,14 @@
 use std::{
+    ffi::OsString,
     fmt,
     io::{self, BufRead, Error, Write},
+    os::unix::ffi::OsStringExt,
     process::Command,
 };
 
 use crate::adapter::Wl;
 
-pub const LOOPBACK_INTERFACE_NAME: &str = "lo";
+pub const LOOPBACK_INTERFACE_NAME: &[u8] = b"lo";
 
 pub enum WiFiStatus {
     Enabled,
@@ -29,8 +31,9 @@ impl Nmcli {
         Self
     }
 
-    fn exec(&self, args: &[&str]) -> Result<Vec<u8>, Error> {
+    fn exec(&self, args: &[&[u8]]) -> Result<Vec<u8>, Error> {
         let mut nmcli = Command::new("nmcli");
+        let args = args.iter().map(|s| OsString::from_vec(s.to_vec()));
         let cmd = nmcli.args(args).output()?;
 
         if !cmd.status.success() {
@@ -83,7 +86,7 @@ impl Wl for Nmcli {
     }
 
     fn list_networks(&self, show_active: bool, show_ssid: bool) -> Result<(), Error> {
-        let mut args: [&str; 5] = ["", "", "connection", "show", ""];
+        let mut args = ["", "", "connection", "show", ""];
 
         if show_ssid {
             args[0] = "--fields";
@@ -94,29 +97,44 @@ impl Wl for Nmcli {
             args[4] = "--active";
         }
 
-        let args: Vec<&str> = args.into_iter().filter(|a| !a.is_empty()).collect();
+        let args: Vec<&[u8]> = args
+            .into_iter()
+            .filter(|a| !a.is_empty())
+            .map(|a| a.as_bytes())
+            .collect();
 
         let result = self.exec(&args[..])?;
         io::stdout().write_all(&result)
     }
 
-    fn get_active_ssids(&self) -> Result<Vec<String>, Error> {
-        let args: [&str; 5] = ["-g", "NAME", "connection", "show", "--active"];
+    fn get_active_ssids(&self) -> Result<Vec<Vec<u8>>, Error> {
+        let args = ["-g", "NAME", "connection", "show", "--active"];
 
-        let result = self.exec(&args)?;
+        let result = self.exec(&args.map(|a| a.as_bytes()))?;
 
-        result
-            .lines()
-            .filter(|l| match l {
-                Ok(l) => !l.contains(LOOPBACK_INTERFACE_NAME),
-                Err(_) => true,
+        Ok(result
+            .split(|b| b == &0xA)
+            .filter_map(|s| {
+                let line = s.strip_suffix(&[0xD]).unwrap_or(s);
+                if line.is_empty() || line == LOOPBACK_INTERFACE_NAME {
+                    return None;
+                }
+
+                Some(line.to_vec())
             })
-            .collect()
+            .collect())
     }
 
-    fn disconnect(&self, ssid: &str, forget: bool) -> Result<(), Error> {
-        let mut args: [&str; 4] = ["connection", "", "id", ssid];
-        args[1] = if forget { "delete" } else { "down" };
+    fn disconnect(&self, ssid: &[u8], forget: bool) -> Result<(), Error> {
+        let mut args = [
+            "connection",
+            if forget { "delete" } else { "down" },
+            "id",
+            "",
+        ]
+        .map(|a| a.as_bytes());
+
+        args[3] = ssid;
 
         let result = self.exec(&args)?;
         io::stdout().write_all(&result[..])
