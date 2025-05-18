@@ -34,17 +34,10 @@ pub fn new() -> impl adapter::Wl {
 
 pub fn toggle() -> Result<(), Error> {
     let process = crate::new();
-    let prev_status = process
-        .get_wifi_status()
-        .map_err(Error::CannotGetWifiStatus)?
-        .to_string();
+    let toggled_status = process.toggle_wifi().map_err(Error::CannotToggleWifi)?;
 
-    let process = crate::new();
-    let toggled_status = process
-        .toggle_wifi(prev_status.as_str())
-        .map_err(Error::CannotToggleWifi)?;
-
-    println!("wifi: {}", toggled_status);
+    let out_buf = format!("wifi: {}\n", toggled_status);
+    write_out(out_buf.as_bytes())?;
 
     Ok(())
 }
