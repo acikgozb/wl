@@ -24,6 +24,7 @@ impl fmt::Display for WiFiStatus {
     }
 }
 
+#[derive(Clone)]
 pub struct Nmcli;
 
 impl Nmcli {
@@ -47,22 +48,23 @@ impl Nmcli {
 
 impl Wl for Nmcli {
     fn get_wifi_status(&self) -> Result<impl fmt::Display, Error> {
-        let args: [&str; 3] = ["-g", "WIFI", "g"];
+        let args = ["-g", "WIFI", "g"].map(|a| a.as_bytes());
         let result = self.exec(&args)?;
 
-        let status = result.lines().take(1).collect::<Result<String, Error>>()?;
-
-        Ok(if status == "enabled" {
+        Ok(if &result[..] == b"enabled\n" {
             WiFiStatus::Enabled
         } else {
             WiFiStatus::Disabled
         })
     }
 
-    fn toggle_wifi(&self, prev_status: &str) -> Result<impl fmt::Display, Error> {
-        let mut args: [&str; 3] = ["radio", "wifi", ""];
+    fn toggle_wifi(&self) -> Result<impl fmt::Display, Error> {
+        let cloned_process = self.clone();
+        let prev_status = cloned_process.get_wifi_status()?;
 
-        let new_status = if prev_status == "enabled" {
+        let mut args = ["radio", "wifi", ""];
+
+        let new_status = if prev_status.to_string() == "enabled" {
             args[2] = "off";
             WiFiStatus::Disabled
         } else {
@@ -70,7 +72,7 @@ impl Wl for Nmcli {
             WiFiStatus::Enabled
         };
 
-        let _ = self.exec(&args)?;
+        let _ = self.exec(&args.map(|a| a.as_bytes()))?;
 
         Ok(new_status)
     }
