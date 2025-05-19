@@ -94,15 +94,19 @@ enum WlCommand {
 
 #[derive(clap::Args, Debug)]
 struct ScanArgs {
-    /// Filter scan list based on minimum scan (1 to 4).
-    #[arg(short = 's', long, default_value_t = 2)]
+    /// Filter scan list based on minimum WiFi signal strength (1 to 100).
+    #[arg(short = 's', long, default_value_t = 40)]
     min_strength: u8,
 
-    /// Turn on re-scanning after a successful scan.
+    /// Bypass cache and force a re-scan.
     #[arg(short = 'r', long, default_value_t = false)]
     re_scan: bool,
 
-    /// Set the re-scan refresh timer.
-    #[arg(short = 't', long, default_value_t = 5)]
-    refresh_in: u8,
+    /// Show specified fields only.
+    #[arg(short = 'f', long)]
+    fields: Option<String>,
+
+    /// Show values of specified fields (terse output).
+    #[arg(short = 'g', long)]
+    get_values: Option<String>,
 }
