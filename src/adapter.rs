@@ -10,3 +10,17 @@ pub trait Wl {
     fn get_active_ssids(&self) -> Result<Vec<Vec<u8>>, io::Error>;
     fn disconnect(&self, ssid: &[u8], forget: bool) -> Result<(), io::Error>;
 }
+
+pub struct Decimal(u8);
+
+impl From<&[u8]> for Decimal {
+    fn from(value: &[u8]) -> Self {
+        Self(value.iter().fold(0, |acc, b| acc * 10 + (b - b'0')))
+    }
+}
+
+impl Decimal {
+    pub fn inner(&self) -> u8 {
+        self.0
+    }
+}
