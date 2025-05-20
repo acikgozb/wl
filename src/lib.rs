@@ -30,6 +30,8 @@ pub enum Error {
     CouldNotAskSSID(io::Error),
     CouldNotDisconnect(io::Error),
     CannotWriteStdout(io::Error),
+    CannotScanWiFi(io::Error),
+    InvalidSignalStrength,
 }
 
 impl error::Error for Error {}
