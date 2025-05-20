@@ -20,11 +20,16 @@ pub enum WlCommand {
     Toggle,
 
     /// See available WiFi networks.
-    Scan(ScanArgs),
+    #[clap(visible_alias = "sc")]
+    Scan {
+        #[command(flatten)]
+        args: ScanArgs,
+    },
 
     /// Connect to a WiFi network.
     Connect {
         //// SSID to connect.
+        #[arg(short = 'i', long)]
         ssid: Option<OsString>,
 
         #[command(flatten)]
@@ -61,19 +66,19 @@ pub enum WlCommand {
 
 #[derive(clap::Args, Debug)]
 pub struct ScanArgs {
-    /// Filter scan list based on minimum WiFi signal strength (1 to 100).
-    #[arg(short = 's', long, default_value_t = 40)]
-    min_strength: u8,
+    /// Filter scan list based on minimum WiFi signal strength (0 to 100).
+    #[arg(short = 's', long, default_value_t = 0)]
+    pub min_strength: u8,
 
     /// Bypass cache and force a re-scan.
     #[arg(short = 'r', long, default_value_t = false)]
-    re_scan: bool,
+    pub re_scan: bool,
 
-    /// Show specified fields only.
-    #[arg(short = 'f', long)]
-    fields: Option<String>,
+    /// Show specified columns only.
+    #[arg(short = 'c', long, conflicts_with = "get_values")]
+    pub columns: Option<String>,
 
     /// Show values of specified fields (terse output).
     #[arg(short = 'g', long)]
-    get_values: Option<String>,
+    pub get_values: Option<String>,
 }

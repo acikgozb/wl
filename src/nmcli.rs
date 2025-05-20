@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ffi::OsString,
     fmt,
     io::{self, BufRead, Error, Write},
@@ -6,9 +7,14 @@ use std::{
     process::Command,
 };
 
-use crate::adapter::{SsidDevPair, Wl};
+use crate::{
+    adapter::{Decimal, SsidDevPair, Wl},
+    api,
+};
 
 pub const LOOPBACK_INTERFACE_NAME: &[u8] = b"lo";
+const LINE_FEED: u8 = 0xA;
+const CARRIAGE_RETURN: u8 = 0xD;
 
 pub enum WiFiStatus {
     Enabled,
@@ -85,9 +91,9 @@ impl Wl for Nmcli {
         const NMCLI_FIELD_SEPARATOR: u8 = b':';
 
         Ok(result
-            .split(|b| b == &0xA)
+            .split(|b| b == &LINE_FEED)
             .filter_map(|s| {
-                let line = s.strip_suffix(&[0xD]).unwrap_or(s);
+                let line = s.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(s);
                 if line.is_empty() {
                     None
                 } else {
@@ -118,7 +124,7 @@ impl Wl for Nmcli {
             .map(|a| a.as_bytes())
             .collect();
 
-        let result = self.exec(&args[..])?;
+        let result = self.exec(&args)?;
         io::stdout().write_all(&result)
     }
 
@@ -128,9 +134,9 @@ impl Wl for Nmcli {
         let result = self.exec(&args.map(|a| a.as_bytes()))?;
 
         Ok(result
-            .split(|b| b == &0xA)
+            .split(|b| b == &LINE_FEED)
             .filter_map(|s| {
-                let line = s.strip_suffix(&[0xD]).unwrap_or(s);
+                let line = s.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(s);
                 if line.is_empty() || line == LOOPBACK_INTERFACE_NAME {
                     return None;
                 }
@@ -153,5 +159,64 @@ impl Wl for Nmcli {
 
         let result = self.exec(&args)?;
         io::stdout().write_all(&result[..])
+    }
+
+    fn scan(&self, args: &api::ScanArgs) -> Result<Vec<u8>, io::Error> {
+        let mut nmcli_args = ["", "", "d", "wifi", "list", "", ""];
+
+        let nmcli_global_args = match (&args.columns, &args.get_values) {
+            (None, None) => ["", ""],
+            (None, Some(values)) => ["-g", values],
+            (Some(columns), None) => ["-f", columns],
+            (Some(columns), Some(_)) => ["-f", columns],
+        };
+        nmcli_args[0..2].copy_from_slice(&nmcli_global_args);
+
+        if args.re_scan {
+            nmcli_args[5..].copy_from_slice(&["--rescan", "yes"]);
+        }
+
+        let nmcli_args: Vec<&[u8]> = nmcli_args
+            .into_iter()
+            .filter(|a| !a.is_empty())
+            .map(|a| a.as_bytes())
+            .collect();
+
+        let scan_result = self.exec(&nmcli_args)?;
+
+        let cloned_process = self.clone();
+        let nmcli_args = ["-g", "SIGNAL", "d", "wifi", "list"];
+
+        let signal_result = cloned_process.exec(&nmcli_args.map(|a| a.as_bytes()))?;
+        let signal_lines = signal_result
+            .split(|b| b == &LINE_FEED)
+            .map(|l| l.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(l))
+            .enumerate();
+
+        let mut valid_signals = HashMap::new();
+
+        for (idx, signal) in signal_lines {
+            let signal = Decimal::from(signal).inner();
+
+            if signal >= args.min_strength {
+                valid_signals.insert(idx + 1, signal);
+            }
+        }
+
+        let filtered_scan = scan_result
+            .split(|b| b == &LINE_FEED)
+            .map(|l| l.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(l))
+            .enumerate()
+            .filter_map(|(idx, l)| {
+                if idx == 0 || valid_signals.contains_key(&idx) {
+                    Some([l, &[LINE_FEED]].concat())
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .collect::<Vec<u8>>();
+
+        Ok(filtered_scan)
     }
 }

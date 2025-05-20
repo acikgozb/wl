@@ -30,6 +30,8 @@ pub enum Error {
     CouldNotAskSSID(io::Error),
     CouldNotDisconnect(io::Error),
     CannotWriteStdout(io::Error),
+    CannotScanWiFi(io::Error),
+    InvalidSignalStrength,
 }
 
 impl error::Error for Error {}
@@ -43,8 +45,6 @@ pub fn new() -> impl adapter::Wl {
     nmcli::Nmcli::new()
 }
 
-fn write_out(buf: &[u8]) -> Result<(), Error> {
-    io::stdout()
-        .write_all(buf)
-        .map_err(Error::CannotWriteStdout)
+fn write_out(mut f: impl io::Write, buf: &[u8]) -> Result<(), Error> {
+    f.write_all(buf).map_err(Error::CannotWriteStdout)
 }

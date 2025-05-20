@@ -33,10 +33,13 @@ fn select_active_ssid() -> Result<Vec<u8>, Error> {
             idx.to_string().as_bytes(),
             b") ",
             &ssid[..],
+            b"\n",
         ]
         .concat();
         conns.insert(idx, ssid);
     }
+
+    let mut stdout = io::stdout();
 
     let out_buf = &[
         b"Select the SSID you want to disconnect from:\n",
@@ -44,8 +47,8 @@ fn select_active_ssid() -> Result<Vec<u8>, Error> {
         b"\n> ",
     ]
     .concat();
-    write_out(out_buf)?;
-    io::stdout().flush().map_err(Error::CouldNotAskSSID)?;
+    write_out(io::stdout(), out_buf)?;
+    stdout.flush().map_err(Error::CouldNotAskSSID)?;
 
     let mut answer_buf = String::new();
     io::stdin()
