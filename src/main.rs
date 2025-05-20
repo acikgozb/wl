@@ -1,4 +1,4 @@
-use std::{error, os::unix::ffi::OsStringExt, process::ExitCode};
+use std::{error, io, os::unix::ffi::OsStringExt, process::ExitCode};
 
 use clap::Parser;
 use wl::api;
@@ -18,7 +18,10 @@ fn run() -> Result<(), Box<dyn error::Error>> {
     match wl_cmd {
         api::WlCommand::Status => wl::status(),
         api::WlCommand::Toggle => wl::toggle(),
-        api::WlCommand::Scan(scan_args) => wl::scan(scan_args),
+        api::WlCommand::Scan { args } => {
+            let mut out_buf = io::stdout();
+            wl::scan(&mut out_buf, args)
+        }
         api::WlCommand::Connect {
             ssid,
             scan_args,
