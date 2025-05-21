@@ -22,11 +22,7 @@ fn run() -> Result<(), Box<dyn error::Error>> {
             let mut out_buf = io::stdout();
             wl::scan(&mut out_buf, args)
         }
-        api::WlCommand::Connect {
-            ssid,
-            scan_args,
-            force,
-        } => wl::connect(),
+        api::WlCommand::Connect { ssid, force } => wl::connect(),
         api::WlCommand::Disconnect { ssid, forget } => {
             let ssid = ssid.map(OsStringExt::into_vec);
             wl::disconnect(ssid, forget)

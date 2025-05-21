@@ -32,9 +32,6 @@ pub enum WlCommand {
         #[arg(short = 'i', long)]
         ssid: Option<OsString>,
 
-        #[command(flatten)]
-        scan_args: ScanArgs,
-
         /// Re-enter the SSID password even if it is a known network.
         #[arg(short, long, default_value_t = false)]
         force: bool,
