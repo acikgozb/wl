@@ -27,7 +27,10 @@ pub enum WlCommand {
     /// Connect to a WiFi network.
     #[clap(visible_alias = "c")]
     Connect {
-        //// SSID to connect.
+        /// SSID to connect.
+        ///
+        /// If the SSID is not provided, then the program will do
+        /// a scan and show the available networks to the user to choose from.
         #[arg(short = 'i', long)]
         ssid: Option<String>,
 

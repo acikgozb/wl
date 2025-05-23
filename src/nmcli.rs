@@ -210,6 +210,44 @@ impl Wl for Nmcli {
         Ok(filtered_scan)
     }
 
+    fn is_known_ssid(&self, ssid: &[u8]) -> Result<bool, Error> {
+        let args = ["-g", "NAME", "connection", "show"].map(|a| a.as_bytes());
+
+        let result = self.exec(&args).map_err(Error::CannotGetSSIDStatus)?;
+        let exists = result
+            .split(|b| b == &LINE_FEED)
+            .map(|l| l.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(l))
+            .any(|l| ssid == l);
+
+        Ok(exists)
+    }
+
+    fn connect(
+        &self,
+        ssid: &[u8],
+        passwd: Option<&[u8]>,
+        is_known_ssid: bool,
+    ) -> Result<Vec<u8>, Error> {
+        if is_known_ssid && passwd.is_some() {
+            self.disconnect(ssid, true)?;
+        }
+
+        let args = if let Some(passwd) = passwd {
+            let mut args = ["d", "wifi", "connect", "", "password", ""].map(|a| a.as_bytes());
+            args[3] = ssid;
+            args[5] = passwd;
+
+            args.to_vec()
+        } else {
+            let mut args = ["connection", "up", "id", ""].map(|a| a.as_bytes());
+            args[3] = ssid;
+
+            args.to_vec()
+        };
+
+        self.exec(&args).map_err(Error::CannotConnect)
+    }
+
     fn get_field_separator(&self) -> u8 {
         b':'
     }

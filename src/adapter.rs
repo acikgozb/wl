@@ -16,6 +16,13 @@ pub trait Wl {
     fn get_active_ssids(&self) -> Result<Vec<Vec<u8>>, Error>;
     fn disconnect(&self, ssid: &[u8], forget: bool) -> Result<Vec<u8>, Error>;
     fn scan(&self, args: &ScanArgs) -> Result<Vec<u8>, Error>;
+    fn is_known_ssid(&self, ssid: &[u8]) -> Result<bool, Error>;
+    fn connect(
+        &self,
+        ssid: &[u8],
+        passwd: Option<&[u8]>,
+        is_known_ssid: bool,
+    ) -> Result<Vec<u8>, Error>;
 }
 
 pub fn new() -> impl Wl {
