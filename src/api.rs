@@ -47,6 +47,9 @@ pub enum WlCommand {
         forget: bool,
 
         /// SSID of the target network.
+        ///
+        /// If the SSID is not provided, then the program will show
+        /// a list of the connected networks to the user to choose from.
         #[arg(short = 'i', long)]
         ssid: Option<String>,
     },
@@ -66,19 +69,30 @@ pub enum WlCommand {
 
 #[derive(clap::Args, Debug)]
 pub struct ScanArgs {
-    /// Filter scan list based on minimum WiFi signal strength (0 to 100).
+    /// Filter scan list based on minimum WiFi signal strength.
     #[arg(short = 's', long, default_value_t = 0)]
     pub min_strength: u8,
 
     /// Bypass cache and force a re-scan.
+    ///
+    /// The re-scanning behavior depends on the underlying network backend.
+    /// `wl` does not have a custom re-scan.
     #[arg(short = 'r', long, default_value_t = false)]
     pub re_scan: bool,
 
-    /// Show specified columns only.
+    /// Only show the specified columns of a network scan.
+    ///
+    /// This option is useful for filtering the table by column names.
+    /// Compared to `--get-values`, the output contains an extra line for
+    /// table columns.
     #[arg(short = 'c', long, conflicts_with = "get_values")]
     pub columns: Option<String>,
 
     /// Show values of specified fields (terse output).
+    ///
+    /// This option is useful for scripting purposes.
+    /// Compared to `--columns`, the output does not contain an extra
+    /// line for table columns.
     #[arg(short = 'g', long)]
     pub get_values: Option<String>,
 }
