@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
     ffi::OsString,
-    fmt,
     io::{self, BufRead},
     os::unix::ffi::OsStringExt,
     process::Command,
@@ -22,14 +21,23 @@ impl Nmcli {
         Self
     }
 
-    fn exec(&self, args: &[&[u8]]) -> Result<Vec<u8>, io::Error> {
+    fn exec(&self, args: &[&[u8]]) -> Result<Vec<u8>, (io::Error, i32)> {
+        let default_ecode = 1i32;
         let mut nmcli = Command::new("nmcli");
         let args = args.iter().map(|s| OsString::from_vec(s.to_vec()));
-        let cmd = nmcli.args(args).output()?;
+        let cmd = nmcli
+            .args(args)
+            .output()
+            .map_err(|err| (err, default_ecode))?;
 
         if !cmd.status.success() {
-            let nmcli_err = cmd.stderr.lines().collect::<Result<String, io::Error>>()?;
-            return Err(io::Error::other(nmcli_err));
+            let nmcli_err = cmd
+                .stderr
+                .lines()
+                .collect::<Result<String, io::Error>>()
+                .map_err(|err| (err, default_ecode))?;
+            let ecode = cmd.status.code().unwrap_or(default_ecode);
+            return Err((io::Error::other(nmcli_err), ecode));
         }
 
         Ok(cmd.stdout)

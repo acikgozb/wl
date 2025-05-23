@@ -1,13 +1,34 @@
 use std::{error, io, process::ExitCode};
 
 use clap::Parser;
-use wl::api;
+use wl::{NetworkAdapterError, api};
 
-// TODO: add err handling and proper exit codes.
+const PROGRAM: &str = "wl";
+
 fn main() -> ExitCode {
     match run() {
         Ok(_) => ExitCode::SUCCESS,
-        Err(_) => ExitCode::FAILURE,
+        Err(err) => {
+            eprintln!("{PROGRAM}: {err}");
+
+            if let Some(err) = err.downcast_ref::<wl::NetworkAdapterError>() {
+                let ecode = match err {
+                    NetworkAdapterError::CannotGetWiFiStatus((_, ecode)) => ecode,
+                    NetworkAdapterError::CannotToggleWiFi((_, ecode)) => ecode,
+
+                    NetworkAdapterError::CannotListNetworks((_, ecode)) => ecode,
+                    NetworkAdapterError::CannotGetActiveConnections((_, ecode)) => ecode,
+                    NetworkAdapterError::CannotGetSSIDStatus((_, ecode)) => ecode,
+                    NetworkAdapterError::CannotDisconnect((_, ecode)) => ecode,
+                    NetworkAdapterError::CannotScanWiFi((_, ecode)) => ecode,
+                    NetworkAdapterError::CannotConnect((_, ecode)) => ecode,
+                };
+
+                ExitCode::from(*ecode as u8)
+            } else {
+                ExitCode::from(1u8)
+            }
+        }
     }
 }
 
@@ -18,10 +39,7 @@ fn run() -> Result<(), Box<dyn error::Error>> {
     match wl_cmd {
         api::WlCommand::Status => wl::status(),
         api::WlCommand::Toggle => wl::toggle(),
-        api::WlCommand::Scan { args } => {
-            let mut out_buf = io::stdout();
-            wl::scan(&mut out_buf, args)
-        }
+        api::WlCommand::Scan { args } => wl::scan(&mut io::stdout(), args),
         api::WlCommand::Connect { ssid, force_passwd } => {
             wl::connect(ssid.map(|i| i.into_bytes()), force_passwd)
         }

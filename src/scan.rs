@@ -6,14 +6,17 @@ use crate::write_bytes;
 
 #[derive(Debug)]
 pub enum Error {
-    InvalidSignalStrength,
+    InvalidSignalStrength(u8),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // WARN: Implement the missing error messages.
         match self {
-            Error::InvalidSignalStrength => todo!(),
+            Error::InvalidSignalStrength(s) => write!(
+                f,
+                "the given signal strength {} is not in limits (1..100)",
+                s
+            ),
         }
     }
 }
@@ -23,7 +26,7 @@ pub fn scan(f: &mut impl io::Write, args: ScanArgs) -> Result<(), Box<dyn error:
     const MAX_SIGNAL_STRENGTH: u8 = 100u8;
 
     let 0u8..=MAX_SIGNAL_STRENGTH = &args.min_strength else {
-        return Err(Error::InvalidSignalStrength)?;
+        return Err(Error::InvalidSignalStrength(args.min_strength))?;
     };
 
     let process = adapter::new();
