@@ -20,10 +20,12 @@ pub enum Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // WARN: Implement the missing error messages.
         match self {
-            Error::CannotReadPasswd(error) => todo!(),
-            Error::CannotReadSSID(error) => todo!(),
+            Error::CannotReadPasswd(err) => write!(f, "cannot read passwd from stdin: {}", err),
+            Error::CannotReadSSID(err) => match err {
+                Some(err) => write!(f, "unable to get the SSID: {}", err),
+                None => write!(f, "the given SSID does not exist on the list"),
+            },
         }
     }
 }

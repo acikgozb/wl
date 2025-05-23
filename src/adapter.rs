@@ -31,20 +31,41 @@ pub fn new() -> impl Wl {
 
 #[derive(Debug)]
 pub enum Error {
-    CannotGetWiFiStatus(io::Error),
-    CannotToggleWiFi(io::Error),
-    CannotListNetworks(io::Error),
-    CannotGetActiveConnections(io::Error),
-    CannotGetSSIDStatus(io::Error),
-    CannotDisconnect(io::Error),
-    CannotScanWiFi(io::Error),
-    CannotConnect(io::Error),
+    CannotGetWiFiStatus((io::Error, i32)),
+    CannotToggleWiFi((io::Error, i32)),
+    CannotListNetworks((io::Error, i32)),
+    CannotGetActiveConnections((io::Error, i32)),
+    CannotGetSSIDStatus((io::Error, i32)),
+    CannotDisconnect((io::Error, i32)),
+    CannotScanWiFi((io::Error, i32)),
+    CannotConnect((io::Error, i32)),
 }
 
 impl error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "will be implemented")
+        match self {
+            Error::CannotGetWiFiStatus((err, _)) => {
+                write!(f, "unable to get the WiFi status: {}", err)
+            }
+            Error::CannotToggleWiFi((err, _)) => write!(f, "unable to toggle WiFi: {}", err),
+            Error::CannotListNetworks((err, _)) => {
+                write!(f, "unable to list the networks: {}", err)
+            }
+            Error::CannotGetActiveConnections((err, _)) => {
+                write!(f, "unable to get the active connections: {}", err)
+            }
+            Error::CannotGetSSIDStatus((err, _)) => {
+                write!(f, "unable to get the SSID status: {}", err)
+            }
+            Error::CannotDisconnect((err, _)) => write!(f, "unable to disconnect: {}", err),
+            Error::CannotScanWiFi((err, _)) => {
+                write!(f, "unable to scan the available networks: {}", err)
+            }
+            Error::CannotConnect((err, _)) => {
+                write!(f, "unable to connect to the network: {}", err)
+            }
+        }
     }
 }
 

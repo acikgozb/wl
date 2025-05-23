@@ -8,11 +8,7 @@ mod scan;
 mod status;
 mod toggle;
 
-use std::{
-    error, fmt,
-    io::{self, Write},
-};
-
+pub use adapter::Error as NetworkAdapterError;
 pub use connect::connect;
 pub use disconnect::disconnect;
 pub use list_networks::list_networks;
@@ -30,8 +26,12 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::CannotWriteBuffer(error) => todo!(),
-            Error::CannotFlushWriter(error) => todo!(),
+            Error::CannotWriteBuffer(err) => {
+                write!(f, "unable to write to the output stream: {}", err)
+            }
+            Error::CannotFlushWriter(err) => {
+                write!(f, "unable to flush the output stream: {}", err)
+            }
         }
     }
 }

@@ -11,9 +11,11 @@ pub enum Error {
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // WARN: Implement the missing error messages.
         match self {
-            Error::InvalidActiveSSID(_) => todo!(),
+            Error::InvalidActiveSSID(err) => match err {
+                Some(err) => write!(f, "unable to get the active SSID: {}", err),
+                None => write!(f, "unable to get the active SSID"),
+            },
         }
     }
 }
