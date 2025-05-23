@@ -6,6 +6,8 @@ use wl::{NetworkAdapterError, api};
 const PROGRAM: &str = "wl";
 
 fn main() -> ExitCode {
+    which::which("nmcli").expect("The underlying network backend should be installed on the host");
+
     match run() {
         Ok(_) => ExitCode::SUCCESS,
         Err(err) => {
