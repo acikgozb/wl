@@ -2,13 +2,13 @@ use std::{
     collections::HashMap,
     ffi::OsString,
     fmt,
-    io::{self, BufRead, Error, Write},
+    io::{self, BufRead},
     os::unix::ffi::OsStringExt,
     process::Command,
 };
 
 use crate::{
-    adapter::{CARRIAGE_RETURN, Decimal, LINE_FEED, SsidDevPair, Wl},
+    adapter::{CARRIAGE_RETURN, Decimal, Error, LINE_FEED, SsidDevPair, Wl},
     api,
 };
 
@@ -36,14 +36,14 @@ impl Nmcli {
         Self
     }
 
-    fn exec(&self, args: &[&[u8]]) -> Result<Vec<u8>, Error> {
+    fn exec(&self, args: &[&[u8]]) -> Result<Vec<u8>, io::Error> {
         let mut nmcli = Command::new("nmcli");
         let args = args.iter().map(|s| OsString::from_vec(s.to_vec()));
         let cmd = nmcli.args(args).output()?;
 
         if !cmd.status.success() {
-            let nmcli_err = cmd.stderr.lines().collect::<Result<String, Error>>()?;
-            return Err(Error::other(nmcli_err));
+            let nmcli_err = cmd.stderr.lines().collect::<Result<String, io::Error>>()?;
+            return Err(io::Error::other(nmcli_err));
         }
 
         Ok(cmd.stdout)
@@ -53,7 +53,7 @@ impl Nmcli {
 impl Wl for Nmcli {
     fn get_wifi_status(&self) -> Result<impl fmt::Display, Error> {
         let args = ["-g", "WIFI", "g"].map(|a| a.as_bytes());
-        let result = self.exec(&args)?;
+        let result = self.exec(&args).map_err(Error::CannotGetWiFiStatus)?;
 
         Ok(if &result[..] == b"enabled\n" {
             WiFiStatus::Enabled
@@ -76,7 +76,9 @@ impl Wl for Nmcli {
             WiFiStatus::Enabled
         };
 
-        let _ = self.exec(&args.map(|a| a.as_bytes()))?;
+        let _ = self
+            .exec(&args.map(|a| a.as_bytes()))
+            .map_err(Error::CannotToggleWiFi)?;
 
         Ok(new_status)
     }
@@ -84,7 +86,9 @@ impl Wl for Nmcli {
     fn get_active_ssid_dev_pairs(&self) -> Result<Vec<SsidDevPair>, Error> {
         let args = ["-g", "NAME,DEVICE", "connection", "show", "--active"];
 
-        let result = self.exec(&args.map(|a| a.as_bytes()))?;
+        let result = self
+            .exec(&args.map(|a| a.as_bytes()))
+            .map_err(Error::CannotGetActiveConnections)?;
 
         const NMCLI_FIELD_SEPARATOR: u8 = b':';
 
@@ -104,7 +108,7 @@ impl Wl for Nmcli {
             .collect::<Vec<SsidDevPair>>())
     }
 
-    fn list_networks(&self, show_active: bool, show_ssid: bool) -> Result<(), Error> {
+    fn list_networks(&self, show_active: bool, show_ssid: bool) -> Result<Vec<u8>, Error> {
         let mut args = ["", "", "connection", "show", ""];
 
         if show_ssid {
@@ -122,14 +126,16 @@ impl Wl for Nmcli {
             .map(|a| a.as_bytes())
             .collect();
 
-        let result = self.exec(&args)?;
-        io::stdout().write_all(&result)
+        let result = self.exec(&args).map_err(Error::CannotListNetworks)?;
+        Ok(result)
     }
 
     fn get_active_ssids(&self) -> Result<Vec<Vec<u8>>, Error> {
         let args = ["-g", "NAME", "connection", "show", "--active"];
 
-        let result = self.exec(&args.map(|a| a.as_bytes()))?;
+        let result = self
+            .exec(&args.map(|a| a.as_bytes()))
+            .map_err(Error::CannotGetSSIDStatus)?;
 
         Ok(result
             .split(|b| b == &LINE_FEED)
@@ -144,7 +150,7 @@ impl Wl for Nmcli {
             .collect())
     }
 
-    fn disconnect(&self, ssid: &[u8], forget: bool) -> Result<(), Error> {
+    fn disconnect(&self, ssid: &[u8], forget: bool) -> Result<Vec<u8>, Error> {
         let mut args = [
             "connection",
             if forget { "delete" } else { "down" },
@@ -152,14 +158,12 @@ impl Wl for Nmcli {
             "",
         ]
         .map(|a| a.as_bytes());
-
         args[3] = ssid;
 
-        let result = self.exec(&args)?;
-        io::stdout().write_all(&result[..])
+        self.exec(&args).map_err(Error::CannotDisconnect)
     }
 
-    fn scan(&self, args: &api::ScanArgs) -> Result<Vec<u8>, io::Error> {
+    fn scan(&self, args: &api::ScanArgs) -> Result<Vec<u8>, Error> {
         let mut nmcli_args = ["", "", "d", "wifi", "list", "", ""];
 
         let nmcli_global_args = match (&args.columns, &args.get_values) {
@@ -180,12 +184,14 @@ impl Wl for Nmcli {
             .map(|a| a.as_bytes())
             .collect();
 
-        let scan_result = self.exec(&nmcli_args)?;
+        let scan_result = self.exec(&nmcli_args).map_err(Error::CannotScanWiFi)?;
 
         let cloned_process = self.clone();
         let nmcli_args = ["-g", "SIGNAL", "d", "wifi", "list"];
 
-        let signal_result = cloned_process.exec(&nmcli_args.map(|a| a.as_bytes()))?;
+        let signal_result = cloned_process
+            .exec(&nmcli_args.map(|a| a.as_bytes()))
+            .map_err(Error::CannotScanWiFi)?;
         let signal_lines = signal_result
             .split(|b| b == &LINE_FEED)
             .map(|l| l.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(l))

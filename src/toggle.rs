@@ -1,13 +1,16 @@
-use std::io;
+use std::{error, io};
 
-use crate::{Error, adapter::Wl, write_out};
+use crate::{
+    adapter:: Wl,
+    write_bytes,
+};
 
-pub fn toggle() -> Result<(), Error> {
+pub fn toggle() -> Result<(), Box<dyn error::Error>> {
     let process = crate::new();
-    let toggled_status = process.toggle_wifi().map_err(Error::CannotToggleWifi)?;
+    let toggled_status = process.toggle_wifi()?;
 
-    let out_buf = format!("wifi: {}\n", toggled_status);
-    write_out(&mut io::stdout(), out_buf.as_bytes())?;
+    let out_buf = [b"wifi: ", &toggled_status[..], b" \n"].concat();
+    write_bytes(&mut io::stdout(), &out_buf)?;
 
     Ok(())
 }

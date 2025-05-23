@@ -1,8 +1,14 @@
-use crate::{Error, adapter::Wl};
+use std::{error, io};
 
-pub fn list_networks(show_active: bool, show_ssid: bool) -> Result<(), Error> {
+use crate::{
+    adapter::Wl,
+    write_bytes,
+};
+
+pub fn list_networks(show_active: bool, show_ssid: bool) -> Result<(), Box<dyn error::Error>> {
     let process = crate::new();
-    process
-        .list_networks(show_active, show_ssid)
-        .map_err(Error::CannotListNetworks)
+    let networks = process.list_networks(show_active, show_ssid)?;
+
+    write_bytes(&mut io::stdout(), &networks)?;
+    Ok(())
 }

@@ -20,31 +20,28 @@ pub use scan::scan;
 pub use status::status;
 pub use toggle::toggle;
 
+use std::{error, fmt, io};
+
 #[derive(Debug)]
 pub enum Error {
-    CannotGetActiveConnections(io::Error),
-    CannotGetWifiStatus(io::Error),
-    CannotToggleWifi(io::Error),
-    CannotListNetworks(io::Error),
-    InvalidActiveSSID(Option<String>),
-    CouldNotAskSSID(io::Error),
-    CouldNotDisconnect(io::Error),
-    CannotWriteStdout(io::Error),
-    CannotScanWiFi(io::Error),
-    InvalidSignalStrength,
+    CannotWriteBuffer(io::Error),
+    CannotFlushWriter(io::Error),
 }
-
-impl error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "will be implemented")
+        match self {
+            Error::CannotWriteBuffer(error) => todo!(),
+            Error::CannotFlushWriter(error) => todo!(),
+        }
     }
 }
+impl error::Error for Error {}
 
 pub fn new() -> impl adapter::Wl {
     nmcli::Nmcli::new()
 }
 
-fn write_out(mut f: impl io::Write, buf: &[u8]) -> Result<(), Error> {
-    f.write_all(buf).map_err(Error::CannotWriteStdout)
+fn write_bytes(f: &mut impl io::Write, buf: &[u8]) -> Result<(), Error> {
+    f.write_all(buf).map_err(Error::CannotWriteBuffer)?;
+    f.flush().map_err(Error::CannotFlushWriter)
 }
