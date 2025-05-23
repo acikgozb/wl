@@ -1,4 +1,4 @@
-use std::{error, io, os::unix::ffi::OsStringExt, process::ExitCode};
+use std::{error, io, process::ExitCode};
 
 use clap::Parser;
 use wl::api;
@@ -22,10 +22,11 @@ fn run() -> Result<(), Box<dyn error::Error>> {
             let mut out_buf = io::stdout();
             wl::scan(&mut out_buf, args)
         }
-        api::WlCommand::Connect { ssid, force } => wl::connect(),
+        api::WlCommand::Connect { ssid, force_passwd } => {
+            wl::connect(ssid.map(|i| i.into_bytes()), force_passwd)
+        }
         api::WlCommand::Disconnect { ssid, forget } => {
-            let ssid = ssid.map(OsStringExt::into_vec);
-            wl::disconnect(ssid, forget)
+            wl::disconnect(ssid.map(|i| i.into_bytes()), forget)
         }
         api::WlCommand::ListNetworks {
             show_active,
