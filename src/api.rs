@@ -41,11 +41,11 @@ pub enum WlCommand {
     #[clap(visible_alias = "d")]
     Disconnect {
         /// Forget the network (delete it from the known network list).
-        #[arg(short = 'd', long, default_value_t = false)]
+        #[arg(short = 'f', long, default_value_t = false)]
         forget: bool,
 
         /// SSID of the target network.
-        ssid: Option<OsString>,
+        ssid: Option<String>,
     },
 
     /// See known networks.

@@ -2,6 +2,9 @@ use std::{fmt, io};
 
 use crate::api::ScanArgs;
 
+pub const LINE_FEED: u8 = 0xA;
+pub const CARRIAGE_RETURN: u8 = 0xD;
+
 pub type SsidDevPair = (Vec<u8>, Vec<u8>);
 
 pub trait Wl {

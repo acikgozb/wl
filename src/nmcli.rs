@@ -8,13 +8,11 @@ use std::{
 };
 
 use crate::{
-    adapter::{Decimal, SsidDevPair, Wl},
+    adapter::{CARRIAGE_RETURN, Decimal, LINE_FEED, SsidDevPair, Wl},
     api,
 };
 
 pub const LOOPBACK_INTERFACE_NAME: &[u8] = b"lo";
-const LINE_FEED: u8 = 0xA;
-const CARRIAGE_RETURN: u8 = 0xD;
 
 pub enum WiFiStatus {
     Enabled,
