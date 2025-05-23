@@ -43,10 +43,11 @@ pub enum WlCommand {
     #[clap(visible_alias = "d")]
     Disconnect {
         /// Forget the network (delete it from the known network list).
-        #[arg(short = 'f', long, default_value_t = false)]
+        #[arg(short, long, default_value_t = false)]
         forget: bool,
 
         /// SSID of the target network.
+        #[arg(short = 'i', long)]
         ssid: Option<String>,
     },
 
@@ -58,7 +59,7 @@ pub enum WlCommand {
         show_active: bool,
 
         /// Output the SSID's only.
-        #[arg(short = 's', long = "ssid", default_value_t = false)]
+        #[arg(short = 'i', long = "ssid", default_value_t = false)]
         show_ssid: bool,
     },
 }
