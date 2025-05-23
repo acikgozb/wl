@@ -1,7 +1,7 @@
 use std::{collections::HashMap, error, fmt, io};
 
 use crate::{
-    adapter::{self, Wl},
+    adapter::{self, CARRIAGE_RETURN, LINE_FEED, LOOPBACK_INTERFACE_NAME, Wl},
     write_bytes,
 };
 
@@ -38,18 +38,28 @@ pub fn disconnect(ssid: Option<Vec<u8>>, forget: bool) -> Result<(), Box<dyn err
 
 fn select_active_ssid() -> Result<Vec<u8>, Box<dyn error::Error>> {
     let process = adapter::new();
+
     let active_ssids = process.get_active_ssids()?;
+    let active_ssids_iter = active_ssids.split(|b| b == &LINE_FEED).filter_map(|s| {
+        let line = s.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(s);
+
+        if line.is_empty() || line == LOOPBACK_INTERFACE_NAME {
+            None
+        } else {
+            Some(line)
+        }
+    });
 
     let mut ssid_lines = Vec::with_capacity(30);
     let mut ssids = HashMap::new();
 
-    for (idx, ssid) in active_ssids.into_iter().enumerate() {
+    for (idx, ssid) in active_ssids_iter.enumerate() {
         ssid_lines = [
             &ssid_lines[..],
             b"(",
             idx.to_string().as_bytes(),
             b") ",
-            &ssid[..],
+            ssid,
             b"\n",
         ]
         .concat();
@@ -75,5 +85,5 @@ fn select_active_ssid() -> Result<Vec<u8>, Box<dyn error::Error>> {
         .remove(&answer)
         .ok_or(Error::InvalidActiveSSID(None))?;
 
-    Ok(ssid)
+    Ok(ssid.to_vec())
 }

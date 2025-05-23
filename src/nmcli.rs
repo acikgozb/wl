@@ -7,11 +7,9 @@ use std::{
 };
 
 use crate::{
-    adapter::{CARRIAGE_RETURN, Decimal, Error, LINE_FEED, SsidDevPair, Wl},
+    adapter::{CARRIAGE_RETURN, Decimal, Error, LINE_FEED, Wl},
     api,
 };
-
-pub const LOOPBACK_INTERFACE_NAME: &[u8] = b"lo";
 
 #[derive(Clone)]
 pub struct Nmcli;
@@ -77,29 +75,11 @@ impl Wl for Nmcli {
         Ok(new_status)
     }
 
-    fn get_active_ssid_dev_pairs(&self) -> Result<Vec<SsidDevPair>, Error> {
+    fn get_active_ssid_dev_pairs(&self) -> Result<Vec<u8>, Error> {
         let args = ["-g", "NAME,DEVICE", "connection", "show", "--active"];
 
-        let result = self
-            .exec(&args.map(|a| a.as_bytes()))
-            .map_err(Error::CannotGetActiveConnections)?;
-
-        const NMCLI_FIELD_SEPARATOR: u8 = b':';
-
-        Ok(result
-            .split(|b| b == &LINE_FEED)
-            .filter_map(|s| {
-                let line = s.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(s);
-                if line.is_empty() {
-                    None
-                } else {
-                    let pair = line
-                        .split(|b| b == &NMCLI_FIELD_SEPARATOR)
-                        .collect::<Vec<&[u8]>>();
-                    Some((pair[0].to_vec(), pair[1].to_vec()))
-                }
-            })
-            .collect::<Vec<SsidDevPair>>())
+        self.exec(&args.map(|a| a.as_bytes()))
+            .map_err(Error::CannotGetActiveConnections)
     }
 
     fn list_networks(&self, show_active: bool, show_ssid: bool) -> Result<Vec<u8>, Error> {
@@ -120,28 +100,14 @@ impl Wl for Nmcli {
             .map(|a| a.as_bytes())
             .collect();
 
-        let result = self.exec(&args).map_err(Error::CannotListNetworks)?;
-        Ok(result)
+        self.exec(&args).map_err(Error::CannotListNetworks)
     }
 
-    fn get_active_ssids(&self) -> Result<Vec<Vec<u8>>, Error> {
+    fn get_active_ssids(&self) -> Result<Vec<u8>, Error> {
         let args = ["-g", "NAME", "connection", "show", "--active"];
 
-        let result = self
-            .exec(&args.map(|a| a.as_bytes()))
-            .map_err(Error::CannotGetSSIDStatus)?;
-
-        Ok(result
-            .split(|b| b == &LINE_FEED)
-            .filter_map(|s| {
-                let line = s.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(s);
-                if line.is_empty() || line == LOOPBACK_INTERFACE_NAME {
-                    return None;
-                }
-
-                Some(line.to_vec())
-            })
-            .collect())
+        self.exec(&args.map(|a| a.as_bytes()))
+            .map_err(Error::CannotGetSSIDStatus)
     }
 
     fn disconnect(&self, ssid: &[u8], forget: bool) -> Result<Vec<u8>, Error> {
