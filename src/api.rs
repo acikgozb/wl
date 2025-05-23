@@ -1,5 +1,3 @@
-use std::ffi::OsString;
-
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -27,14 +25,15 @@ pub enum WlCommand {
     },
 
     /// Connect to a WiFi network.
+    #[clap(visible_alias = "c")]
     Connect {
         //// SSID to connect.
         #[arg(short = 'i', long)]
-        ssid: Option<OsString>,
+        ssid: Option<String>,
 
         /// Re-enter the SSID password even if it is a known network.
         #[arg(short, long, default_value_t = false)]
-        force: bool,
+        force_passwd: bool,
     },
 
     /// Disconnect from a WiFi network.
