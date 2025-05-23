@@ -40,12 +40,12 @@ fn select_active_ssid() -> Result<Vec<u8>, Box<dyn error::Error>> {
     let process = adapter::new();
     let active_ssids = process.get_active_ssids()?;
 
-    let mut ssids = Vec::new();
-    let mut conns = HashMap::new();
+    let mut ssid_lines = Vec::with_capacity(30);
+    let mut ssids = HashMap::new();
 
     for (idx, ssid) in active_ssids.into_iter().enumerate() {
-        ssids = [
-            &ssids[..],
+        ssid_lines = [
+            &ssid_lines[..],
             b"(",
             idx.to_string().as_bytes(),
             b") ",
@@ -53,17 +53,12 @@ fn select_active_ssid() -> Result<Vec<u8>, Box<dyn error::Error>> {
             b"\n",
         ]
         .concat();
-        conns.insert(idx, ssid);
+        ssids.insert(idx, ssid);
     }
 
     let mut stdout = io::stdout();
 
-    let out_buf = &[
-        b"Select the SSID you want to disconnect from:\n",
-        &ssids[..],
-        b"\n> ",
-    ]
-    .concat();
+    let out_buf = &[&ssid_lines[..], b"Select the SSID to disconnect: "].concat();
     write_bytes(&mut stdout, out_buf)?;
 
     let mut answer_buf = String::new();
@@ -76,7 +71,7 @@ fn select_active_ssid() -> Result<Vec<u8>, Box<dyn error::Error>> {
         .parse::<usize>()
         .map_err(|err| Error::InvalidActiveSSID(Some(err.to_string())))?;
 
-    let ssid = conns
+    let ssid = ssids
         .remove(&answer)
         .ok_or(Error::InvalidActiveSSID(None))?;
 
