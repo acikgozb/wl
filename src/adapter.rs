@@ -8,6 +8,7 @@ pub const CARRIAGE_RETURN: u8 = 0xD;
 pub type SsidDevPair = (Vec<u8>, Vec<u8>);
 
 pub trait Wl {
+    fn get_field_separator(&self) -> u8;
     fn get_wifi_status(&self) -> Result<Vec<u8>, Error>;
     fn toggle_wifi(&self) -> Result<Vec<u8>, Error>;
     fn list_networks(&self, show_active: bool, show_ssid: bool) -> Result<Vec<u8>, Error>;

@@ -209,4 +209,8 @@ impl Wl for Nmcli {
 
         Ok(filtered_scan)
     }
+
+    fn get_field_separator(&self) -> u8 {
+        b':'
+    }
 }
