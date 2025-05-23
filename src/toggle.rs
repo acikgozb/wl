@@ -1,12 +1,12 @@
 use std::{error, io};
 
 use crate::{
-    adapter:: Wl,
+    adapter::{self, Wl},
     write_bytes,
 };
 
 pub fn toggle() -> Result<(), Box<dyn error::Error>> {
-    let process = crate::new();
+    let process = adapter::new();
     let toggled_status = process.toggle_wifi()?;
 
     let out_buf = [b"wifi: ", &toggled_status[..], b" \n"].concat();

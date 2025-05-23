@@ -1,12 +1,12 @@
 use std::{error, io};
 
 use crate::{
-    adapter::Wl,
+    adapter::{self, Wl},
     write_bytes,
 };
 
 pub fn status() -> Result<(), Box<dyn error::Error>> {
-    let process = crate::new();
+    let process = adapter::new();
     let pairs = process.get_active_ssid_dev_pairs()?;
 
     let wifi_status = process.get_wifi_status()?;

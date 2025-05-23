@@ -25,7 +25,7 @@ pub fn disconnect(ssid: Option<Vec<u8>>, forget: bool) -> Result<(), Box<dyn err
         None => select_active_ssid()?,
     };
 
-    let process = crate::new();
+    let process = adapter::new();
     let result = process.disconnect(&ssid, forget)?;
 
     let mut out_buf = io::stdout();
@@ -35,7 +35,7 @@ pub fn disconnect(ssid: Option<Vec<u8>>, forget: bool) -> Result<(), Box<dyn err
 }
 
 fn select_active_ssid() -> Result<Vec<u8>, Box<dyn error::Error>> {
-    let process = crate::new();
+    let process = adapter::new();
     let active_ssids = process.get_active_ssids()?;
 
     let mut ssids = Vec::new();

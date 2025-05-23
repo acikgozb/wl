@@ -17,6 +17,10 @@ pub trait Wl {
     fn scan(&self, args: &ScanArgs) -> Result<Vec<u8>, Error>;
 }
 
+pub fn new() -> impl Wl {
+    nmcli::Nmcli::new()
+}
+
 #[derive(Debug)]
 pub enum Error {
     CannotGetWiFiStatus(io::Error),

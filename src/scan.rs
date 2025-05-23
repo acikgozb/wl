@@ -1,6 +1,6 @@
 use std::{error, fmt, io};
 
-use crate::adapter::Wl;
+use crate::adapter::{self, Wl};
 use crate::api::ScanArgs;
 use crate::write_bytes;
 
@@ -26,7 +26,7 @@ pub fn scan(f: &mut impl io::Write, args: ScanArgs) -> Result<(), Box<dyn error:
         return Err(Error::InvalidSignalStrength)?;
     };
 
-    let process = crate::new();
+    let process = adapter::new();
     let result = process.scan(&args)?;
     Ok(write_bytes(f, &result[..])?)
 }

@@ -37,10 +37,6 @@ impl fmt::Display for Error {
 }
 impl error::Error for Error {}
 
-pub fn new() -> impl adapter::Wl {
-    nmcli::Nmcli::new()
-}
-
 fn write_bytes(f: &mut impl io::Write, buf: &[u8]) -> Result<(), Error> {
     f.write_all(buf).map_err(Error::CannotWriteBuffer)?;
     f.flush().map_err(Error::CannotFlushWriter)
