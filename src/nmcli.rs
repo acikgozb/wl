@@ -14,20 +14,6 @@ use crate::{
 
 pub const LOOPBACK_INTERFACE_NAME: &[u8] = b"lo";
 
-pub enum WiFiStatus {
-    Enabled,
-    Disabled,
-}
-
-impl fmt::Display for WiFiStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            WiFiStatus::Enabled => write!(f, "enabled"),
-            WiFiStatus::Disabled => write!(f, "disabled"),
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct Nmcli;
 
@@ -51,29 +37,29 @@ impl Nmcli {
 }
 
 impl Wl for Nmcli {
-    fn get_wifi_status(&self) -> Result<impl fmt::Display, Error> {
+    fn get_wifi_status(&self) -> Result<Vec<u8>, Error> {
         let args = ["-g", "WIFI", "g"].map(|a| a.as_bytes());
         let result = self.exec(&args).map_err(Error::CannotGetWiFiStatus)?;
 
-        Ok(if &result[..] == b"enabled\n" {
-            WiFiStatus::Enabled
-        } else {
-            WiFiStatus::Disabled
-        })
+        Ok(result
+            .split(|a| a == &LINE_FEED)
+            .flat_map(|l| l.strip_suffix(&[CARRIAGE_RETURN]).unwrap_or(l))
+            .copied()
+            .collect())
     }
 
-    fn toggle_wifi(&self) -> Result<impl fmt::Display, Error> {
+    fn toggle_wifi(&self) -> Result<Vec<u8>, Error> {
         let cloned_process = self.clone();
         let prev_status = cloned_process.get_wifi_status()?;
 
         let mut args = ["radio", "wifi", ""];
 
-        let new_status = if prev_status.to_string() == "enabled" {
+        let new_status = if &prev_status[..] == b"enabled" {
             args[2] = "off";
-            WiFiStatus::Disabled
+            b"disabled".to_vec()
         } else {
             args[2] = "on";
-            WiFiStatus::Enabled
+            b"enabled".to_vec()
         };
 
         let _ = self
