@@ -1,3 +1,29 @@
+//! A simple wrapper around network backend programs, designed to provide a simple interface for host WiFi management.
+//!
+//! The WiFi functionality it exposes are executed by the network backends.
+//! Here is a list of network backends that are supported:
+//!
+//! - [`nmcli`] (NetworkManager)
+//!
+//! To see the interface for each network backend, check out the [`Wl`] trait.
+//! To see the available functionality, check out the corresponding functions below:
+//!
+//! - [`status`]
+//! - [`toggle`]
+//! - [`list_networks`]
+//! - [`scan`]
+//! - [`connect`]
+//! - [`disconnect`]
+//!
+//! [`nmcli`]: crate::Nmcli
+//! [`Wl`]: crate::Wl
+//! [`status`]: crate::status
+//! [`toggle`]: crate::toggle
+//! [`list_networks`]: crate::list_networks
+//! [`scan`]: crate::scan
+//! [`connect`]: crate::connect
+//! [`disconnect`]: crate::disconnect
+
 mod adapter;
 pub mod api;
 mod connect;
