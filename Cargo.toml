@@ -1,7 +1,11 @@
 [package]
 name = "wl"
 version = "0.1.0"
+authors = ["Berk Acikgoz <acikgozb@proton.me>"]
 edition = "2024"
+description = "A command line utility for host WiFi management, powered by nmcli."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/acikgozb/wl"
 
 [dependencies]
 clap = { version = "4.5.37", features = ["derive"] }
@@ -9,3 +13,9 @@ termion = { version = "4.0.5" }
 
 [target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dependencies]
 which = "7.0.0"
+
+[profile.release]
+lto = true
+strip = true
+# Size > comp time for this program, hence the codegen flag.
+codegen-units = 1
