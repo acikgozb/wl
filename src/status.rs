@@ -5,6 +5,27 @@ use crate::{
     write_bytes,
 };
 
+/// Provides the WiFi status and connected SSID-Device pairs by using a [`Wl`] implementation.
+///
+/// The WiFi status and SSID-Device pairs are written to the stdout stream.
+///
+/// The format of the WiFi status depends on the [`Wl`] implementation.
+///
+/// The format of the SSID-Device pairs is like below:
+///
+/// `connected networks: SSID1/Dev1, SSID2/Dev2, ..., SSIDN/DevN`
+///
+/// # Panics
+///
+/// This function does not panic.
+///
+/// # Errors
+///
+/// This function can return an [`adapter::Error`] when the underlying [`Wl`] implementation fails or [`io::Error`] when the information cannot be written on the stdout stream.
+///
+/// [`Wl`]: crate::Wl
+/// [`adapter::Error`]: crate::adapter::Error
+/// [`io::Error`]: std::io::Error
 pub fn status() -> Result<(), Box<dyn error::Error>> {
     let mut stdout = io::stdout();
     let process = adapter::new();

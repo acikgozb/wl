@@ -1,12 +1,31 @@
-use std::{collections::HashMap, error, fmt, io};
+use std::{
+    collections::HashMap,
+    error, fmt,
+    io::{self},
+};
 
 use crate::{
     adapter::{self, CARRIAGE_RETURN, LINE_FEED, LOOPBACK_INTERFACE_NAME, Wl},
     write_bytes,
 };
 
+/// Defines [`Error`] variants that may return during a disconnect process.
+///
+/// [`Error`]: std::error::Error
 #[derive(Debug)]
 pub enum Error {
+    /// Represents a read faliure whilst trying to obtain the SSID.
+    ///
+    /// This read failure can happen in three ways:
+    ///
+    /// 1 - From the underlying stream (stdin).
+    /// 2 - By providing an input in the wrong format.
+    /// 3 - By providing an SSID that does not exist on the given list of SSID's.
+    /// Based on the error case, it holds:
+    ///
+    /// - [`io::Error`] coming from the stream (stdin).
+    /// - The invalid SSID format.
+    /// - None.
     InvalidActiveSSID(Option<String>),
 }
 impl fmt::Display for Error {
@@ -21,6 +40,30 @@ impl fmt::Display for Error {
 }
 impl error::Error for Error {}
 
+/// Disconnects from a WiFi network by using a [`Wl`] implementation.
+///
+/// If an SSID is not given by the caller, then `disconnect` shows a list of active networks to choose from.
+///
+/// If `forget` is set to `true`, then the selected SSID is disconnected and removed from the known network list.
+/// If `forget` is set to `false`, then the selected SSID is only disconnected.
+/// The successful disconnection result format depends on the [`Wl`] implementation.
+///
+/// The SSID selection is retrieved from stdin, and the result of the disconnect is written to stdout.
+///
+/// # Panics
+///
+/// This function does not panic.
+///
+/// # Errors
+///
+/// This function returns [`Error::InvalidActiveSSID`] if the provided SSID cannot be read.
+///
+/// This function can also return an [`NetworkAdapterError`] when the underlying [`Wl`] implementation fails or [`io::Error`] when the successful disconnection result cannot be written on the stdout stream.
+///
+/// [`Wl`]: crate::Wl
+/// [`Error::InvalidActiveSSID`]: crate::DisconnectError::InvalidActiveSSID
+/// [`NetworkAdapterError`]: crate::adapter::Error
+/// [`io::Error`]: std::io::Error
 pub fn disconnect(ssid: Option<Vec<u8>>, forget: bool) -> Result<(), Box<dyn error::Error>> {
     let ssid = match ssid {
         Some(val) => val,
