@@ -12,9 +12,32 @@ use crate::{
     write_bytes,
 };
 
+/// Defines [`Error`] variants that may return during a connection attempt.
+///
+/// [`Error`]: `std::error::Error`
 #[derive(Debug)]
 pub enum Error {
+    /// Represents a read failure whilst trying to obtain the SSID password.
+    ///
+    /// This failure can only come from the underlying stream (e.g. stdin).
+    /// It holds the details of the underlying [`io::Error`].
+    ///
+    /// [`io::Error`]: std::io::Error
     CannotReadPasswd(io::Error),
+
+    /// Represents a read faliure whilst trying to obtain the SSID.
+    ///
+    /// This error can happen in three ways:
+    ///
+    /// - From the underlying stdin stream.
+    /// - By providing an invalid SSID selection.
+    /// - By providing an SSID that does not exist on the given list of SSID's.
+    ///
+    /// Based on the error case, it holds:
+    ///
+    /// - [`io::Error`] coming from the stream (stdin).
+    /// - The invalid SSID selection.
+    /// - None.
     CannotReadSSID(Option<String>),
 }
 
@@ -31,6 +54,33 @@ impl fmt::Display for Error {
 }
 impl error::Error for Error {}
 
+/// Connects to a given WiFi network by using a [`Wl`] implementation.
+///
+/// If an SSID is not given by the caller, then `connect` shows a list of available networks to choose from.
+///
+/// If `force_passwd` is set to `true`, the caller is asked to provide a password for the SSID, even if the SSID is a known network.
+/// If not, then the password is asked when the provided SSID is not in the known network list of the host.
+///
+/// The validity of SSID-password pair is delegated to the [`Wl`] implementation. `connect` does not validate the pair.
+/// The success result of a connection attempt depends on the [`Wl`] implementation.
+///
+/// The SSID selection and password are both retrieved from stdin, and the result of the connection attempt is written to stdout.
+///
+/// # Panics
+///
+/// This function does not panic.
+///
+/// # Errors
+///
+/// This function returns [`Error::CannotReadSSID`] if the provided SSID cannot be read, and [`Error::CannotReadPasswd`] if the provided password cannot be read.
+///
+/// This function can also return an [`NetworkAdapterError`] when the underlying [`Wl`] implementation fails or [`io::Error`] when the successful connection result cannot be written on the stdout stream.
+///
+/// [`Wl`]: crate::Wl
+/// [`Error::CannotReadSSID`]: crate::ConnectError::CannotReadSSID
+/// [`Error::CannotReadPasswd`]: crate::ConnectError::CannotReadPasswd
+/// [`NetworkAdapterError`]: crate::adapter::Error
+/// [`io::Error`]: std::io::Error
 pub fn connect(ssid: Option<Vec<u8>>, force_passwd: bool) -> Result<(), Box<dyn error::Error>> {
     let process = adapter::new();
 
