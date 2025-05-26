@@ -1,0 +1,29 @@
+name: GH Release - wl
+run-name: wl - ${{ github.ref }}
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create release
+        env:
+          GIT_TAG: ${{ github.ref_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GIT_TAG" \
+           --draft \
+           --title "$GIT_TAG" \
+           --generate-notes
+        shell: bash
