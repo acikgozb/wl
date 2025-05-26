@@ -19,7 +19,7 @@ A simple `nmcli` wrapper that is designed for host WiFi management.
     - [`wl disconnect`](#wl-disconnect)
       - [SSID](#disconnect-ssid)
       - [Forget a network](#forget-a-network)
-  - [<a id='license'></a> LICENSE](#license)
+  - [LICENSE](#license)
 <!--toc:end-->
 
 ## <a id='installation'></a> Installation
@@ -115,6 +115,9 @@ $ wl list-networks -i
 # NAME
 # SSID1
 # lo
+# SSID2
+# SSID3
+# SSID4
 ```
 
 ### <a id='wl-scan'></a> `wl scan`
